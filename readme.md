@@ -1,5 +1,4 @@
-# 🚀 code-server + Containerlab VSCode Extension with HTTPS (Self-Signed Cert)
-
+# 🚀 VScode-server with HTTPS (Self-Signed Cert) + Containerlab + Clab VSCode Extension Installation
 > ✅ You can also use the [automated installation script](#automated-installation-script) below to install everything in one go!
 
 ---
