@@ -58,4 +58,9 @@ sudo systemctl restart code-server@$USER
 
 echo "✅ Done!"
 echo ""
-echo "🌐 Access code-server at: https://<your-server-ip>
+echo "🌐 Access code-server at: https://<your-server-ip>:8443"
+echo "⚠️ WARNING:"
+echo "   You will likely see a certificate warning in your browser."
+echo "   ⚠️ Google Chrome and Microsoft Edge have known issues trusting self-signed certs with localhost/remote IPs."
+echo "   ✅ It's best to use Firefox which handles self-signed certs more reliably."
+echo "   🐞 More details: https://github.com/coder/code-server/issues/3410"
