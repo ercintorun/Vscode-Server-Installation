@@ -1,10 +1,12 @@
-# 🧠 code-server with HTTPS (Self-Signed Cert) on Ubuntu + Containerlab Extension Fix
+# 🚀 code-server + Containerlab VSCode Extension with HTTPS (Self-Signed Cert)
 
-This guide walks you through installing `code-server` with HTTPS on Ubuntu using a self-signed certificate and fixing the **`stdout maxBuffer length exceeded`** issue in the Containerlab VSCode extension.
+> ✅ You can also use the [automated installation script](#automated-installation-script) below to install everything in one go!
 
 ---
 
-## 🛠️ 1. Install `code-server`
+## 🛠️ Manual Installation Steps
+
+### ✅ 1. Install code-server
 
 ```bash
 curl -fsSL https://code-server.dev/install.sh | sh
@@ -12,17 +14,11 @@ curl -fsSL https://code-server.dev/install.sh | sh
 
 ---
 
-## 🔐 2. Generate a Self-Signed Certificate
-
-1. Create a directory to store your certificate:
+### 🔐 2. Generate a Self-Signed Certificate
 
 ```bash
 mkdir -p ~/.config/code-server
-```
 
-2. Generate the certificate:
-
-```bash
 openssl req -x509 -nodes -days 365 \
   -newkey rsa:2048 \
   -keyout ~/.config/code-server/self-signed.key \
@@ -32,7 +28,7 @@ openssl req -x509 -nodes -days 365 \
 
 ---
 
-## ⚙️ 3. Configure `code-server` to Use HTTPS
+### ⚙️ 3. Configure code-server to Use HTTPS
 
 Edit the config file:
 
@@ -40,7 +36,7 @@ Edit the config file:
 nano ~/.config/code-server/config.yaml
 ```
 
-Example configuration:
+Example:
 
 ```yaml
 bind-addr: 0.0.0.0:8443
@@ -50,49 +46,52 @@ cert: ~/.config/code-server/self-signed.crt
 cert-key: ~/.config/code-server/self-signed.key
 ```
 
-> ⚠️ Port `8443` is used to avoid permission issues with `443` (unless running as root).
+> 💡 Port 8443 avoids needing root permissions, unlike 443.
 
 ---
 
-## ▶️ 4. Start `code-server`
-
-Start manually:
+### ▶️ 4. Start code-server
 
 ```bash
 code-server
-```
-
-Or enable it as a service:
-
-```bash
+# or as a service:
 sudo systemctl enable --now code-server@$USER
 ```
 
 ---
 
-## 🌐 5. Access code-server in Browser
+### 🌐 5. Access Code Server
 
-Visit:
+Open your browser and go to:
 
 ```
 https://<your-server-ip>:8443
 ```
 
-> You’ll see a warning about the self-signed certificate. Proceed manually or import the certificate into your browser's trust store.
+> ⚠️ **Self-signed certificate warning** will appear in your browser.
 
 ---
 
-## 🐞 6. Fix: `stdout maxBuffer length exceeded` in Containerlab Extension
+### ⚠️ 6. Browser Compatibility Note
 
-### ❗ Problem
+⚠️ Self-signed certificates may not work reliably with **Google Chrome** or **Microsoft Edge**  
+✅ It is recommended to use **Firefox**, which handles self-signed certs more gracefully.
 
-The extension runs:
+More details here: https://github.com/coder/code-server/issues/3410
+
+---
+
+## 🧩 7. Fixing "stdout maxBuffer length exceeded" for Containerlab Extension
+
+### Problem:
+
+The VSCode containerlab extension executes:
 
 ```bash
 containerlab inspect -r docker --all --format json
 ```
 
-Internally using Node.js `child_process.exec`, which has a default `maxBuffer` of ~1MB. For large lab topologies, this causes:
+Internally using `child_process.exec`, which has a default buffer size (~1MB). For large labs, this leads to:
 
 ```
 RangeError [ERR_CHILD_PROCESS_STDIO_MAXBUFFER]: stdout maxBuffer length exceeded
@@ -100,19 +99,19 @@ RangeError [ERR_CHILD_PROCESS_STDIO_MAXBUFFER]: stdout maxBuffer length exceeded
 
 ---
 
-### ✅ Solution
+### ✅ Fix
 
-#### 1. Locate the extension:
+#### 1. Find Extension Folder
 
 ```bash
-~/.local/share/code-server/extensions/srl-labs.vscode-containerlab-0.12.2-universal
+cd ~/.local/share/code-server/extensions/srl-labs.vscode-containerlab-0.12.2-universal
 ```
 
 ---
 
-#### 2. Modify `inspect.js`
+#### 2. Edit `inspect.js`
 
-**File:** `./out/commands/inspect.js`
+File: `./out/commands/inspect.js`
 
 Find lines like:
 
@@ -120,7 +119,7 @@ Find lines like:
 const { stdout, stderr } = await execAsync(command);
 ```
 
-Update to:
+Change to:
 
 ```js
 const { stdout, stderr } = await execAsync(command, { timeout: 15000, maxBuffer: 10 * 1024 * 1024 });
@@ -128,9 +127,9 @@ const { stdout, stderr } = await execAsync(command, { timeout: 15000, maxBuffer:
 
 ---
 
-#### 3. Modify `clabTreeDataProvider.js`
+#### 3. Edit `clabTreeDataProvider.js`
 
-**File:** `./out/clabTreeDataProvider.js`
+File: `./out/clabTreeDataProvider.js`
 
 Find:
 
@@ -138,7 +137,7 @@ Find:
 const { stdout } = await execAsync(cmd);
 ```
 
-Update to:
+Change to:
 
 ```js
 const { stdout } = await execAsync(cmd, { timeout: 15000, maxBuffer: 10 * 1024 * 1024 });
@@ -146,19 +145,25 @@ const { stdout } = await execAsync(cmd, { timeout: 15000, maxBuffer: 10 * 1024 *
 
 ---
 
-### 🔁 Restart `code-server`
+## 📜 Automated Installation Script
+
+Save and run this to install everything (code-server, self-signed certs, containerlab extension, and fixes):
 
 ```bash
-sudo systemctl restart code-server@$USER
+curl -fsSL https://raw.githubusercontent.com/your-repo/install-code-server-with-containerlab.sh | bash
 ```
 
+> 🛠 Replace the link with your actual raw script URL hosted in your repo.
+
+This script:
+
+- Installs `code-server`
+- Generates a self-signed cert
+- Sets up password-based auth
+- Installs the Containerlab extension
+- Patches the `maxBuffer` problem
+- Starts the service
+
+📌 **Also warns about Chrome/Edge certificate issues** and recommends **Firefox** instead.
+
 ---
-
-✅ Now, `containerlab inspect` can handle large outputs without crashing the extension.
-
----
-
-## 📌 Notes
-
-- You may increase the buffer size (e.g., `20 * 1024 * 1024`) if necessary.
-- Restart the code-server after modifying extension files for changes to take effect.
